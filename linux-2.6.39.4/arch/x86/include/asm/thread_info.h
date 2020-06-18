@@ -187,6 +187,7 @@ register unsigned long current_stack_pointer asm("esp") __used;
 /* how to get the thread information struct from C */
 static inline struct thread_info *current_thread_info(void)
 {
+    // 获取堆栈寄存器esp的值，在对齐到8192边界
 	return (struct thread_info *)
 		(current_stack_pointer & ~(THREAD_SIZE - 1));
 }

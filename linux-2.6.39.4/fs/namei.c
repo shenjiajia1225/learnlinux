@@ -116,9 +116,15 @@
  */
 static int do_getname(const char __user *filename, char *page)
 {
+    // 打开一个普通文件，page为已经分配好的缓存对象
+    // 目的是为了将用户态的文件名拷贝到系统态的缓存page中
 	int retval;
-	unsigned long len = PATH_MAX;
+	unsigned long len = PATH_MAX; // 4096
 
+    // ???
+    // #define segment_eq(a, b) ((a).seg == (b).seg)
+    // #define get_fs()         (current_thread_info()->addr_limit)
+    // current_thread_info 在 [arch/x86/include/asm/thread_info.h] 中，获得当前thread_info结构
 	if (!segment_eq(get_fs(), KERNEL_DS)) {
 		if ((unsigned long) filename >= TASK_SIZE)
 			return -EFAULT;
@@ -126,6 +132,7 @@ static int do_getname(const char __user *filename, char *page)
 			len = TASK_SIZE - (unsigned long) filename;
 	}
 
+    // 从用户态 拷贝文件名 到内核态的内存中
 	retval = strncpy_from_user(page, filename, len);
 	if (retval > 0) {
 		if (retval < len)
@@ -138,9 +145,14 @@ static int do_getname(const char __user *filename, char *page)
 
 static char *getname_flags(const char __user * filename, int flags)
 {
+    // 打开一个普通文件进入到这里时 flags = 0
 	char *tmp, *result;
 
 	result = ERR_PTR(-ENOMEM);
+    // __getname = __getname_gfp(GFP_KERNEL) [include/linux/fs.h]
+    // __getname_gfp = kmem_cache_alloc(names_cachep, (gfp)) [include/linux/fs.h]
+    // extern struct kmem_cache *names_cachep;
+    // 分配一个缓存对象
 	tmp = __getname();
 	if (tmp)  {
 		int retval = do_getname(filename, tmp);
@@ -3186,6 +3198,7 @@ int vfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 SYSCALL_DEFINE4(renameat, int, olddfd, const char __user *, oldname,
 		int, newdfd, const char __user *, newname)
 {
+    // rename普通文件 olddfd = newdfd = AT_FDCWD
 	struct dentry *old_dir, *new_dir;
 	struct dentry *old_dentry, *new_dentry;
 	struct dentry *trap;
@@ -3277,8 +3290,10 @@ exit:
 	return error;
 }
 
+// rename 系统调用
 SYSCALL_DEFINE2(rename, const char __user *, oldname, const char __user *, newname)
 {
+    // 这里实际是调用 SYSCALL_DEFINE4(renameat, ... ) 系统调用函数
 	return sys_renameat(AT_FDCWD, oldname, AT_FDCWD, newname);
 }
 

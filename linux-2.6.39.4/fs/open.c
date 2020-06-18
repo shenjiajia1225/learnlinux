@@ -897,6 +897,7 @@ EXPORT_SYMBOL(fd_install);
 
 static inline int build_open_flags(int flags, int mode, struct open_flags *op)
 {
+    // 用户态传入的flags 和 mode
 	int lookup_flags = 0;
 	int acc_mode;
 
@@ -952,6 +953,7 @@ static inline int build_open_flags(int flags, int mode, struct open_flags *op)
 		lookup_flags |= LOOKUP_DIRECTORY;
 	if (!(flags & O_NOFOLLOW))
 		lookup_flags |= LOOKUP_FOLLOW;
+    // 对于打开一个指定的普通文件，这里的lookup_flags=0
 	return lookup_flags;
 }
 
@@ -990,8 +992,10 @@ EXPORT_SYMBOL(file_open_root);
 
 long do_sys_open(int dfd, const char __user *filename, int flags, int mode)
 {
+    // 系统调用open进入时 dfd=AT_FDCWD
 	struct open_flags op;
 	int lookup = build_open_flags(flags, mode, &op);
+    // 正常打开一个指定文件 lookup = 0, getname在nameei.c中
 	char *tmp = getname(filename);
 	int fd = PTR_ERR(tmp);
 
@@ -1016,6 +1020,8 @@ SYSCALL_DEFINE3(open, const char __user *, filename, int, flags, int, mode)
 {
 	long ret;
 
+    // force_o_largefile = (BITS_PER_LONG != 32) 
+    // BITS_PER_LONG 64位平台应该就是=64 flags包含了 O_LARGEFILE
 	if (force_o_largefile())
 		flags |= O_LARGEFILE;
 
